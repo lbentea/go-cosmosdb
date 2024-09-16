@@ -29,3 +29,14 @@ func TestOne(t *testing.T) {
 	_, err := c.GetDatabase(context.Background(), "ToDoList", nil)
 	assert.NotNil(t, err)
 }
+
+func TestMaskHeader(t *testing.T) {
+	header := http.Header{}
+	header.Add("Authorization", "Bearer some-secret-token")
+	header.Add("Content-Type", "application/json")
+
+	maskedHeader := maskHeader(header)
+
+	assert.Equal(t, "*", maskedHeader.Get(HEADER_AUTH))
+	assert.Equal(t, "application/json", maskedHeader.Get("Content-Type"))
+}
