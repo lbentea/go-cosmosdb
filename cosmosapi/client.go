@@ -192,12 +192,13 @@ func (c *Client) do(ctx context.Context, r *http.Request, data interface{}) (*ht
 		}
 
 		r.Body = ioutil.NopCloser(bytes.NewReader(b))
-		c.Log.Debugf("Cosmos request: %s %s (headers: %s) (attempt: %d/%d)\n", r.Method, r.URL, r.Header, retryCount+1, c.Config.MaxRetries)
+
+		c.Log.Debugf("Cosmos request: %s %s (headers: %s) (attempt: %d/%d)\n", r.Method, r.URL, maskHeader(r.Header), retryCount+1, c.Config.MaxRetries)
 		resp, err = cli.Do(r)
 		if err != nil {
 			return nil, err
 		}
-		c.Log.Debugf("Cosmos response: %s (headers: %s)", resp.Status, resp.Header)
+		c.Log.Debugf("Cosmos response: %s (headers: %s)", resp.Status, maskHeader(resp.Header))
 		err = c.handleResponse(ctx, r, resp, data)
 		if err == errRetry {
 			continue
@@ -205,6 +206,16 @@ func (c *Client) do(ctx context.Context, r *http.Request, data interface{}) (*ht
 		return resp, err
 	}
 	return resp, ErrMaxRetriesExceeded
+}
+
+func maskHeader(header http.Header) http.Header {
+	filteredHeader := header.Clone()
+	if authHeader, ok := filteredHeader["Authorization"]; ok {
+		for i := range authHeader {
+			authHeader[i] = "*"
+		}
+	}
+	return filteredHeader
 }
 
 func (c *Client) handleResponse(ctx context.Context, req *http.Request, resp *http.Response, ret interface{}) error {
